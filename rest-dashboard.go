@@ -275,7 +275,7 @@ type SetDashboardParams struct {
 // may be only loaded with HTTP API but not created or updated.
 //
 // Reflects POST /api/dashboards/db API call.
-func (r *Client) SetDashboard(ctx context.Context, board Board, params SetDashboardParams) (StatusMessage, error) {
+func (r *Client) SetDashboard(ctx context.Context, board Board, params SetDashboardParams, requestParams ...APIRequestModifier) (StatusMessage, error) {
 	var (
 		isBoardFromDB bool
 		newBoard      struct {
@@ -300,7 +300,7 @@ func (r *Client) SetDashboard(ctx context.Context, board Board, params SetDashbo
 	if raw, err = json.Marshal(newBoard); err != nil {
 		return StatusMessage{}, err
 	}
-	if raw, code, err = r.post(ctx, "api/dashboards/db", raw); err != nil {
+	if raw, code, err = r.post(ctx, "api/dashboards/db", raw, requestParams...); err != nil {
 		return StatusMessage{}, err
 	}
 	if err = json.Unmarshal(raw, &resp); err != nil {
