@@ -105,7 +105,7 @@ func (r *Client) CreateDatasource(ctx context.Context, ds Datasource, requestMod
 
 // UpdateDatasource updates a datasource from data passed in argument.
 // Reflects PUT /api/datasources/:datasourceId API call.
-func (r *Client) UpdateDatasource(ctx context.Context, ds Datasource) (StatusMessage, error) {
+func (r *Client) UpdateDatasource(ctx context.Context, ds Datasource, requestModifier ...APIRequestModifier) (StatusMessage, error) {
 	var (
 		raw  []byte
 		resp StatusMessage
@@ -114,7 +114,7 @@ func (r *Client) UpdateDatasource(ctx context.Context, ds Datasource) (StatusMes
 	if raw, err = json.Marshal(ds); err != nil {
 		return StatusMessage{}, err
 	}
-	if raw, _, err = r.put(ctx, fmt.Sprintf("api/datasources/%d", ds.ID), raw); err != nil {
+	if raw, _, err = r.put(ctx, fmt.Sprintf("api/datasources/%d", ds.ID), raw, requestModifier...); err != nil {
 		return StatusMessage{}, err
 	}
 	if err = json.Unmarshal(raw, &resp); err != nil {
