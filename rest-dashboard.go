@@ -238,10 +238,10 @@ func (r *Client) SearchDashboards(ctx context.Context, query string, starred boo
 // Reflects GET /api/search API call.
 func (r *Client) Search(ctx context.Context, params ...SearchParam) ([]FoundBoard, error) {
 	var (
-		raw    []byte
-		boards []FoundBoard
-		code   int
-		err    error
+		raw       []byte
+		boards    []FoundBoard
+		code      int
+		err       error
 		modifiers []APIRequestModifier
 	)
 
@@ -313,7 +313,7 @@ func (r *Client) SetDashboard(ctx context.Context, board Board, params SetDashbo
 }
 
 //SetRawDashboardWithParam sends the serialized along with request parameters
-func (r *Client) SetRawDashboardWithParam(ctx context.Context, request RawBoardRequest) (StatusMessage, error) {
+func (r *Client) SetRawDashboardWithParam(ctx context.Context, request RawBoardRequest, requestParams ...APIRequestModifier) (StatusMessage, error) {
 	var (
 		rawResp []byte
 		resp    StatusMessage
@@ -325,7 +325,7 @@ func (r *Client) SetRawDashboardWithParam(ctx context.Context, request RawBoardR
 	if err != nil {
 		return StatusMessage{}, errors.New(err.Error())
 	}
-	if rawResp, code, err = r.post(ctx, "api/dashboards/db", raw); err != nil {
+	if rawResp, code, err = r.post(ctx, "api/dashboards/db", raw, requestParams...); err != nil {
 		return StatusMessage{}, err
 	}
 	if err = json.Unmarshal(rawResp, &resp); err != nil {
