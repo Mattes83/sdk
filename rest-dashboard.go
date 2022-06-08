@@ -25,6 +25,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -129,14 +130,14 @@ type DashboardVersion struct {
 }
 
 // GetDashboardVersionsByDashboardID reflects /api/dashboards/id/:dashboardId/versions API call
-func (r *Client) GetDashboardVersionsByDashboardID(ctx context.Context, dashboardID uint, params ...QueryParam) ([]DashboardVersion, error) {
+func (r *Client) GetDashboardVersionsByDashboardID(ctx context.Context, dashboardID uint, requestModifier ...APIRequestModifier) ([]DashboardVersion, error) {
 	var (
 		raw  []byte
 		code int
 		err  error
 	)
 
-	if raw, code, err = r.get(ctx, fmt.Sprintf("api/dashboards/id/%d/versions", dashboardID), queryParams(params...)); err != nil {
+	if raw, code, err = r.get(ctx, fmt.Sprintf("api/dashboards/id/%d/versions", dashboardID), requestModifier...); err != nil {
 		return nil, err
 	}
 	if code != 200 {
@@ -270,10 +271,10 @@ func (r *Client) SearchDashboards(ctx context.Context, query string, starred boo
 // Reflects GET /api/search API call.
 func (r *Client) Search(ctx context.Context, params ...SearchParam) ([]FoundBoard, error) {
 	var (
-		raw    []byte
-		boards []FoundBoard
-		code   int
-		err    error
+		raw       []byte
+		boards    []FoundBoard
+		code      int
+		err       error
 		modifiers []APIRequestModifier
 	)
 
@@ -433,30 +434,6 @@ type (
 	QueryParam func(*url.Values)
 )
 
-// queryParams returns url.Values built from multiple QueryParam
-func queryParams(params ...QueryParam) url.Values {
-	u := url.URL{}
-	q := u.Query()
-	for _, p := range params {
-		p(&q)
-	}
-	return q
-}
-
-// QueryParamStart sets `start` parameter
-func QueryParamStart(start uint) QueryParam {
-	return func(v *url.Values) {
-		v.Set("start", strconv.Itoa(int(start)))
-	}
-}
-
-// QueryParamLimit sets `limit` parameter
-func QueryParamLimit(limit uint) QueryParam {
-	return func(v *url.Values) {
-		v.Set("limit", strconv.Itoa(int(limit)))
-	}
-}
-
 // Search entities to be used with SearchType().
 const (
 	SearchTypeFolder    SearchParamType = "dash-folder"
@@ -539,6 +516,15 @@ func SearchLimit(limit uint) SearchParam {
 			values.Set("limit", strconv.FormatUint(uint64(limit), 10))
 			req.URL.RawQuery = values.Encode()
 		}
+	}
+}
+
+// QueryParamStart sets `start` parameter
+func QueryParamStart(start uint) SearchParam {
+	return func(req *http.Request) {
+		values := req.URL.Query()
+		values.Set("start", strconv.Itoa(int(start)))
+		req.URL.RawQuery = values.Encode()
 	}
 }
 

@@ -24,26 +24,21 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"net/url"
+	"net/http"
 	"strconv"
 )
 
 // SearchTeams search teams with optional parameters.
 // Reflects GET /api/teams/search API call.
-func (r *Client) SearchTeams(ctx context.Context, params ...SearchTeamParams) (PageTeams, error) {
+func (r *Client) SearchTeams(ctx context.Context, requestModifier ...APIRequestModifier) (PageTeams, error) {
 	var (
 		raw       []byte
 		pageTeams PageTeams
 		code      int
 		err       error
-		requestParams = make(url.Values)
 	)
 
-	for _, p := range params {
-		p(requestParams)
-	}
-
-	if raw, code, err = r.get(ctx, "api/teams/search", requestParams); err != nil {
+	if raw, code, err = r.get(ctx, "api/teams/search", requestModifier...); err != nil {
 		return pageTeams, err
 	}
 	if code != 200 {
@@ -98,7 +93,7 @@ func (r *Client) GetTeam(ctx context.Context, id uint) (Team, error) {
 
 // CreateTeam creates a new team.
 // Reflects POST /api/teams API call.
-func (r *Client) CreateTeam(ctx context.Context, t Team) (StatusMessage, error) {
+func (r *Client) CreateTeam(ctx context.Context, t Team, requestModifier ...APIRequestModifier) (StatusMessage, error) {
 	var (
 		raw  []byte
 		resp StatusMessage
@@ -107,7 +102,7 @@ func (r *Client) CreateTeam(ctx context.Context, t Team) (StatusMessage, error) 
 	if raw, err = json.Marshal(t); err != nil {
 		return StatusMessage{}, err
 	}
-	if raw, _, err = r.post(ctx, "api/teams", nil, raw); err != nil {
+	if raw, _, err = r.post(ctx, "api/teams", raw, requestModifier...); err != nil {
 		return StatusMessage{}, err
 	}
 	if err = json.Unmarshal(raw, &resp); err != nil {
@@ -118,7 +113,7 @@ func (r *Client) CreateTeam(ctx context.Context, t Team) (StatusMessage, error) 
 
 // UpdateTeam updates a team.
 // Reflects PUT /api/teams/:id API call.
-func (r *Client) UpdateTeam(ctx context.Context, id uint, t Team) (StatusMessage, error) {
+func (r *Client) UpdateTeam(ctx context.Context, id uint, t Team, requestModifier ...APIRequestModifier) (StatusMessage, error) {
 	var (
 		raw  []byte
 		resp StatusMessage
@@ -127,7 +122,7 @@ func (r *Client) UpdateTeam(ctx context.Context, id uint, t Team) (StatusMessage
 	if raw, err = json.Marshal(t); err != nil {
 		return StatusMessage{}, err
 	}
-	if raw, _, err = r.put(ctx, fmt.Sprintf("api/teams/%d", id), nil, raw); err != nil {
+	if raw, _, err = r.put(ctx, fmt.Sprintf("api/teams/%d", id), raw, requestModifier...); err != nil {
 		return StatusMessage{}, err
 	}
 	if err = json.Unmarshal(raw, &resp); err != nil {
@@ -178,7 +173,7 @@ func (r *Client) GetTeamMembers(ctx context.Context, teamId uint) ([]TeamMember,
 
 // AddTeamMember adds a member to a team.
 // Reflects POST /api/teams/:teamId/members API call.
-func (r *Client) AddTeamMember(ctx context.Context, teamId uint, userId uint) (StatusMessage, error) {
+func (r *Client) AddTeamMember(ctx context.Context, teamId uint, userId uint, requestModifier ...APIRequestModifier) (StatusMessage, error) {
 	var (
 		raw  []byte
 		resp StatusMessage
@@ -191,7 +186,7 @@ func (r *Client) AddTeamMember(ctx context.Context, teamId uint, userId uint) (S
 	}); err != nil {
 		return StatusMessage{}, err
 	}
-	if raw, _, err = r.post(ctx, fmt.Sprintf("api/teams/%d/members", teamId), nil, raw); err != nil {
+	if raw, _, err = r.post(ctx, fmt.Sprintf("api/teams/%d/members", teamId), raw, requestModifier...); err != nil {
 		return StatusMessage{}, err
 	}
 	if err = json.Unmarshal(raw, &resp); err != nil {
@@ -242,7 +237,7 @@ func (r *Client) GetTeamPreferences(ctx context.Context, teamId uint) (TeamPrefe
 
 // UpdateTeamPreferences updates the preferences for a team by id.
 // Reflects PUT /api/teams/:teamId/preferences API call.
-func (r *Client) UpdateTeamPreferences(ctx context.Context, teamId uint, tp TeamPreferences) (StatusMessage, error) {
+func (r *Client) UpdateTeamPreferences(ctx context.Context, teamId uint, tp TeamPreferences, requestModifier ...APIRequestModifier) (StatusMessage, error) {
 	var (
 		raw  []byte
 		resp StatusMessage
@@ -251,7 +246,7 @@ func (r *Client) UpdateTeamPreferences(ctx context.Context, teamId uint, tp Team
 	if raw, err = json.Marshal(tp); err != nil {
 		return StatusMessage{}, err
 	}
-	if raw, _, err = r.put(ctx, fmt.Sprintf("api/teams/%d/preferences", teamId), nil, raw); err != nil {
+	if raw, _, err = r.put(ctx, fmt.Sprintf("api/teams/%d/preferences", teamId), raw, requestModifier...); err != nil {
 		return StatusMessage{}, err
 	}
 	if err = json.Unmarshal(raw, &resp); err != nil {
@@ -263,37 +258,34 @@ func (r *Client) UpdateTeamPreferences(ctx context.Context, teamId uint, tp Team
 // TeamNotFound is an error returned if the given team was not found.
 var TeamNotFound = fmt.Errorf("team not found")
 
-// SearchTeamParams is the type for all options implementing query parameters
-// perpage optional. default 1000
-// page optional. default 1
-// http://docs.grafana.org/http_api/team/#search-teams
-// http://docs.grafana.org/http_api/team/#search-teams-with-paging
-type SearchTeamParams func(values url.Values)
-
-// WithQuery adds a query parameter
-func WithQuery(query string) SearchTeamParams {
-	return func(v url.Values) {
-		v.Set("query", query)
+func WithQuery(query string) APIRequestModifier {
+	return func(req *http.Request) {
+		values := req.URL.Query()
+		values.Set("quer", query)
+		req.URL.RawQuery = values.Encode()
 	}
 }
 
-// WithPagesize adds a page size query parameter
-func WithPagesize(size uint) SearchTeamParams {
-	return func(v url.Values) {
-		v.Set("perpage", strconv.FormatUint(uint64(size),10))
+func WithPagesize(size uint) APIRequestModifier {
+	return func(req *http.Request) {
+		values := req.URL.Query()
+		values.Set("perpage", strconv.FormatUint(uint64(size), 10))
+		req.URL.RawQuery = values.Encode()
 	}
 }
 
-// WithPage adds a page number query parameter
-func WithPage(page uint) SearchTeamParams {
-	return func(v url.Values) {
-		v.Set("page", strconv.FormatUint(uint64(page),10))
+func WithPage(page uint) APIRequestModifier {
+	return func(req *http.Request) {
+		values := req.URL.Query()
+		values.Set("page", strconv.FormatUint(uint64(page), 10))
+		req.URL.RawQuery = values.Encode()
 	}
 }
 
-// WithTeam adds a query parameter
-func WithTeam(team string) SearchTeamParams {
-	return func(v url.Values) {
-		v.Set("team", team)
+func WithTeam(team string) APIRequestModifier {
+	return func(req *http.Request) {
+		values := req.URL.Query()
+		values.Set("team", team)
+		req.URL.RawQuery = values.Encode()
 	}
 }

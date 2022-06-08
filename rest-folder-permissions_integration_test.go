@@ -47,9 +47,7 @@ func Test_FolderPermissions(t *testing.T) {
 		UserId:     actualUser.ID,
 	})
 
-	_, err = client.UpdateFolderPermissions(ctx, folder.UID,
-		updatePermissions...,
-	)
+	_, err = client.UpdateFolderPermissions(ctx, folder.UID, updatePermissions)
 	if err != nil {
 		t.Fatal(err)
 	}

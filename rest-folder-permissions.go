@@ -48,7 +48,7 @@ func (r *Client) GetFolderPermissions(ctx context.Context, folderUID string) ([]
 
 // UpdateFolderPermissions update folders permission
 // Reflects PUT /api/folders/:uid/permissions API call.
-func (r *Client) UpdateFolderPermissions(ctx context.Context, folderUID string, up ...FolderPermission) (StatusMessage, error) {
+func (r *Client) UpdateFolderPermissions(ctx context.Context, folderUID string, up []FolderPermission, requestModifier ...APIRequestModifier) (StatusMessage, error) {
 	var (
 		raw  []byte
 		rf   StatusMessage
@@ -63,7 +63,7 @@ func (r *Client) UpdateFolderPermissions(ctx context.Context, folderUID string, 
 	if raw, err = json.Marshal(request); err != nil {
 		return rf, err
 	}
-	if raw, code, err = r.post(ctx, fmt.Sprintf("api/folders/%s/permissions", folderUID), nil, raw); err != nil {
+	if raw, code, err = r.post(ctx, fmt.Sprintf("api/folders/%s/permissions", folderUID), raw, requestModifier...); err != nil {
 		return rf, err
 	}
 	if code != 200 {
