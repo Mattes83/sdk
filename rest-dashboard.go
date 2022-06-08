@@ -129,14 +129,14 @@ type DashboardVersion struct {
 }
 
 // GetDashboardVersionsByDashboardID reflects /api/dashboards/id/:dashboardId/versions API call
-func (r *Client) GetDashboardVersionsByDashboardID(ctx context.Context, dashboardID uint, params ...QueryParam) ([]DashboardVersion, error) {
+func (r *Client) GetDashboardVersionsByDashboardID(ctx context.Context, dashboardID uint, requestModifier ...APIRequestModifier) ([]DashboardVersion, error) {
 	var (
 		raw  []byte
 		code int
 		err  error
 	)
 
-	if raw, code, err = r.get(ctx, fmt.Sprintf("api/dashboards/id/%d/versions", dashboardID), queryParams(params...)); err != nil {
+	if raw, code, err = r.get(ctx, fmt.Sprintf("api/dashboards/id/%d/versions", dashboardID), requestModifier...); err != nil {
 		return nil, err
 	}
 	if code != 200 {
@@ -429,33 +429,7 @@ type (
 	SearchParam APIRequestModifier
 	// SearchParamType is a type accepted by SearchType func.
 	SearchParamType string
-	// QueryParam is a type for specifying arbitrary API parameters
-	QueryParam func(*url.Values)
 )
-
-// queryParams returns url.Values built from multiple QueryParam
-func queryParams(params ...QueryParam) url.Values {
-	u := url.URL{}
-	q := u.Query()
-	for _, p := range params {
-		p(&q)
-	}
-	return q
-}
-
-// QueryParamStart sets `start` parameter
-func QueryParamStart(start uint) QueryParam {
-	return func(v *url.Values) {
-		v.Set("start", strconv.Itoa(int(start)))
-	}
-}
-
-// QueryParamLimit sets `limit` parameter
-func QueryParamLimit(limit uint) QueryParam {
-	return func(v *url.Values) {
-		v.Set("limit", strconv.Itoa(int(limit)))
-	}
-}
 
 // Search entities to be used with SearchType().
 const (
@@ -552,6 +526,15 @@ func SearchPage(page uint) SearchParam {
 			values.Set("page", strconv.FormatUint(uint64(page), 10))
 			req.URL.RawQuery = values.Encode()
 		}
+	}
+}
+
+// Start specifies where to start
+func Start(start uint) SearchParam {
+	return func(req *http.Request) {
+		values := req.URL.Query()
+		values.Add("start", strconv.FormatUint(uint64(start), 10))
+		req.URL.RawQuery = values.Encode()
 	}
 }
 

@@ -60,10 +60,11 @@ func (r *Client) UpdateFolderPermissions(ctx context.Context, folderUID string, 
 	}{
 		Items: up,
 	}
+
 	if raw, err = json.Marshal(request); err != nil {
 		return rf, err
 	}
-	if raw, code, err = r.post(ctx, fmt.Sprintf("api/folders/%s/permissions", folderUID), nil, raw); err != nil {
+	if raw, code, err = r.post(ctx, fmt.Sprintf("api/folders/%s/permissions", folderUID), raw); err != nil {
 		return rf, err
 	}
 	if code != 200 {

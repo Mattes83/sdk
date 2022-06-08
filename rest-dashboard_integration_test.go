@@ -119,10 +119,11 @@ func Test_Dashboard_CRUD_By_UID(t *testing.T) {
 
 func Test_GetDashboardVersionsByDashboardID(t *testing.T) {
 	var (
-		board sdk.Board
-		err   error
-		start = sdk.QueryParamStart(0)
-		limit = sdk.QueryParamLimit(10)
+		board     sdk.Board
+		err       error
+		modifiers = []sdk.APIRequestModifier{
+			sdk.APIRequestModifier(sdk.Start(0)), sdk.Limit(10),
+		}
 	)
 	ctx := context.Background()
 	client := getClient(t)
@@ -161,7 +162,7 @@ func Test_GetDashboardVersionsByDashboardID(t *testing.T) {
 	}
 
 	// fetch versions
-	versions, err := client.GetDashboardVersionsByDashboardID(ctx, board.ID, start, limit)
+	versions, err := client.GetDashboardVersionsByDashboardID(ctx, board.ID, modifiers...)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -177,7 +178,7 @@ func Test_GetDashboardVersionsByDashboardID(t *testing.T) {
 	}
 
 	// fetch non-existing dashboard to validate error case
-	_, err = client.GetDashboardVersionsByDashboardID(ctx, 42, start, limit)
+	_, err = client.GetDashboardVersionsByDashboardID(ctx, 42, modifiers...)
 	if err == nil {
 		t.Fatal("when fetching dashboard version with erroneous inputs, it should return an error, got nil error")
 	}
